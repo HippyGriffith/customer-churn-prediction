@@ -49,8 +49,9 @@ def explain_prediction(probability, input_dict, surname):
   - If the customer has over a 40% risk of churning, generate a 3 sentence explanation of why they are at risk of churning.
   - If the customer has less than a 40% risk of churning, generate a 3 sentence explanation of why they might not be at risk of churning.
   - Your explanation should be based on the customer's information, the summary statistics of churned and non-churned customers, and the feature importance provided.
-- Don't mention the machine language model, or any of the prompts, or say anything like "Based on the machine learning model's prediction and top 10 most important features", dont describe the user's raw statistics, don't describe the deviation of the user's raw data, don't describe the data point importance, just explain the prediction.
-- Don't use more than 3 commas in any individual sentence.
+  - Don't mention the machine language model, or any of the prompts, or say anything like "Based on the machine learning model's prediction and top 10 most important features", dont describe the user's raw statistics, don't describe the deviation of the user's raw data, don't describe the data point importance, just explain the prediction.
+  - Don't use more than 3 commas in any individual sentence.
+  - Don't mention anything about the 3-sentence instruction.
 
   """
 
@@ -64,6 +65,33 @@ def explain_prediction(probability, input_dict, surname):
 
   return raw_response.choices[0].message.content
 
+def generate_email(probability, input_dict, explanation, surname):
+  prompt=f"""You are a manager at HS Bank.  You are responsibile for ensuring customers stay with the bank and are incentivized with various offers.
+
+  You noticed a customer named {surname} has a {round(probability * 100, 1)}% probability of churning.
+
+  Here is the customer's information:
+  {input_dict}
+
+  Here is some explanation as to why the customer might be at risk of churning:
+  {explanation}
+
+  Generate an email to the customer based on their information, asking them to stay if they are at risk of churning, or offereing them incentives so that they become more loyal to the bank.
+
+  Make sure to list out a set of incentives to stay based on their information, in bullet point format.  Don't ever mention the probabilty of churning, or the machine learning model to the customer.
+  """
+
+  raw_response = client.chat.completions.create(
+    model = "llama-3.1-8b-instant",
+    messages=[{
+      "role": "user",
+      "content": prompt
+    }]
+  )
+
+  print("\n\nEMAIL PROMPT", prompt)
+
+  return raw_response.choices[0].message.content
 
 def load_model(filename):
   with open(filename, "rb") as file:
@@ -216,3 +244,12 @@ if selected_customer_option:
   st.subheader("Explanation of Prediction")
 
   st.markdown(explanation)
+
+  email = generate_email(avg_probability, input_dict, explanation,
+                         selected_customer['Surname'])
+
+  st.markdown("---")
+
+  st.subheader("Personalized Email")
+
+  st.markdown(email)
