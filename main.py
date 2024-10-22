@@ -3,8 +3,46 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 from openai import OpenAI
+
+
+def create_gauge_chart(avg_probability):
+  fig = go.Figure(go.Indicator(
+      mode = "gauge+number",
+      value = avg_probability * 100,
+      title = {"text": "Churn Probability"},
+      domain = {'x': [0, 1], 'y': [0, 1]},
+      gauge = {'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
+               'bar': {'color': "darkblue"},
+               'bgcolor': "white",
+               'borderwidth': 2,
+               'bordercolor': "gray",
+               'steps': [
+                   {'range': [0, 30], 'color': "lightgreen"},
+                   {'range': [30, 70], 'color': "yellow"},
+                   {'range': [70, 100], 'color': "red"}]}))
+  return fig
+
+def create_model_probability_chart(probabilities):
+  models = list(probabilities.keys())
+  probs = list(probabilities.values())
+
+  fig = go.Figure(data=[
+    go.Bar(y=models, x=probs, orientation='h', 
+           text=[f'{p:.2%}' for p in probs], 
+           textposition='auto')
+  ])
+
+  fig.update_layout(title='Churn Probability by Model',
+    yaxis_title='Models',
+    xaxis_title='Probability',
+    xaxis=dict(tickformat='.0%', range=[0,1]),
+    height=400,
+    margin=dict(l=20, r=20, t=40, b=20))
+
+  return fig
 
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
@@ -149,11 +187,20 @@ def make_predictions(input_df, input_dict):
   # get the average of the predictions
   avg_probability = np.mean(list(probabilities.values()))
 
-  st.markdown("### Model Probabilities")
-  for model, prob in probabilities.items():
-    st.write(f"{model} {prob}")
+  #st.markdown("### Model Probabilities")
+  #for model, prob in probabilities.items():
+  #  st.write(f"{model} {prob}")
 
-  st.write(f"Average Probability: {avg_probability}")
+  #st.write(f"Average Probability: {avg_probability}")
+
+  with col1:
+    fig = create_gauge_chart(avg_probability)
+    st.plotly_chart(fig, use_container_width=True)
+    st.write(f"The customer has a {avg_probability:.2%} probability of churning.")
+
+  with col2:
+    fig_probs = create_model_probability_chart(probabilities)
+    st.plotly_chart(fig_probs, use_container_width=True)
 
   return avg_probability
 
