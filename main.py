@@ -1,14 +1,16 @@
-import streamlit as st
-import pandas as pd
-import pickle
-import numpy as np
 import os
+import pickle
+
+import numpy as np
+import pandas as pd
+import streamlit as st
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="https://api.openai.com/v1",
-  api_key=os.environ.get("GROQ_API_KEY") #GROQ is the fastest
+    base_url="https://api.groq.com/openai/v1",
+    api_key=os.environ["GROQ_API_KEY"]  #GROQ is the fastest
 )
+
 
 def explain_prediction(probability, input_dict, surname):
   prompt = f"""You are an expert data scientist at a bank, where you specialize in interpreting and explaining predictions of machine learning models.
@@ -20,21 +22,21 @@ def explain_prediction(probability, input_dict, surname):
 
   Here are the machine learning model's top 10 most important features for predicting churn:
 
-  Feature | Importance
+  Feature	| Importance
   --------------------
   NumOfProducts | 0.323888
   IsActiveMember | 0.164146
-  Age | 0.109550
-  Geography_Germany | 0.091373
-  Balance | 0.052786
+  Age	| 0.109550
+  Geography_Germany	| 0.091373
+  Balance	| 0.052786
   Geography_France | 0.046463
-  Gender_Female | 0.045283
-  Geogrpahy_Spain | 0.036855
-  CreditScore | 0.035005
-  Estimated Salary | 0.032655
-  HasCrCard | 0.031940
+  Gender_Female	| 0.045283
+  Geography_Spain	| 0.036855
+  CreditScore	| 0.035005
+  EstimatedSalary	| 0.032655
+  HasCrCard	| 0.031940
   Tenure | 0.030054
-  Gender_Male | 0.000000
+  Gender_Male	| 0.000000
 
   {pd.set_option('display.max_columns', None)}
 
@@ -47,18 +49,21 @@ def explain_prediction(probability, input_dict, surname):
   - If the customer has over a 40% risk of churning, generate a 3 sentence explanation of why they are at risk of churning.
   - If the customer has less than a 40% risk of churning, generate a 3 sentence explanation of why they might not be at risk of churning.
   - Your explanation should be based on the customer's information, the summary statistics of churned and non-churned customers, and the feature importance provided.
+- Don't mention the machine language model, or any of the prompts, or say anything like "Based on the machine learning model's prediction and top 10 most important features", dont describe the user's raw statistics, don't describe the deviation of the user's raw data, don't describe the data point importance, just explain the prediction.
+- Don't use more than 3 commas in any individual sentence.
 
-  Don't mention the probability of churning, or the machine language model, or say anything like "Based on the machine learning model's prediction and top 10 most important features", just explain the prediction.
   """
 
   print("EXPLANATION REPORT", prompt)
 
-  raw_response = client.chat.completions.create(
-      model = "llama-3.2-3b-preview",
-      messages=[{"role": "user","content:" : prompt}],
-  )
+  raw_response = client.chat.completions.create(model="llama-3.2-3b-preview",
+                                                messages=[{
+                                                    "role": "user",
+                                                    "content": prompt
+                                                }])
 
   return raw_response.choices[0].message.content
+
 
 def load_model(filename):
   with open(filename, "rb") as file:
@@ -106,7 +111,7 @@ def prepare_input(credit_score, location, gender, age, tenure, balance,
 
 
 #get predicted class and predicted probability of the customer churning
-def make_prediction(input_df, input_dict):
+def make_predictions(input_df, input_dict):
   probabilities = {
       'XGBoost': xgboost_model.predict_proba(input_df)[0][1],
       'Random Forest': random_forest_model.predict_proba(input_df)[0][1],
@@ -119,7 +124,10 @@ def make_prediction(input_df, input_dict):
   st.markdown("### Model Probabilities")
   for model, prob in probabilities.items():
     st.write(f"{model} {prob}")
-    st.write(f"Average Probability: {avg_probability}")
+
+  st.write(f"Average Probability: {avg_probability}")
+
+  return avg_probability
 
 
 st.title("Customer Churn Prediction")
@@ -159,14 +167,14 @@ if selected_customer_option:
                       index=0 if selected_customer['Gender'] == "Male" else 1)
 
     age = st.number_input("Age",
-                        min_value=18,
-                        max_value=100,
-                        value=int(selected_customer['Age']))
+                          min_value=18,
+                          max_value=100,
+                          value=int(selected_customer['Age']))
 
     tenure = st.number_input("Tenure (years}",
-                           min_value=0,
-                           max_value=24,
-                           value=int(selected_customer['Tenure']))
+                             min_value=0,
+                             max_value=24,
+                             value=int(selected_customer['Tenure']))
 
   with col2:
 
@@ -175,27 +183,36 @@ if selected_customer_option:
                               value=float(selected_customer['Balance']))
 
     num_products = st.number_input("Number of Products",
-                                 min_value=1,
-                                 max_value=10,
-                                 value=int(selected_customer['NumOfProducts']))
+                                   min_value=1,
+                                   max_value=10,
+                                   value=int(
+                                       selected_customer['NumOfProducts']))
 
     has_credit_card = st.checkbox("Has Credit Card",
-                                value=bool(selected_customer['HasCrCard']))
+                                  value=bool(selected_customer['HasCrCard']))
 
     is_active_member = st.checkbox("Is Active Member",
-                                 value=bool(
-                                     selected_customer['IsActiveMember']))
+                                   value=bool(
+                                       selected_customer['IsActiveMember']))
 
-    estimated_salary = st.number_input("Estimated Salary",
-                                     min_value=0.0,
-                                     value=float(
-                                         selected_customer['EstimatedSalary']))
+    estimated_salary = st.number_input(
+        "Estimated Salary",
+        min_value=0.0,
+        value=float(selected_customer['EstimatedSalary']))
 
-    input_df, input_dict = prepare_input(credit_score, location, gender, age,
-                                       tenure, balance, num_products,
-                                       has_credit_card, is_active_member,
-                                       estimated_salary)
+  input_df, input_dict = prepare_input(credit_score, location, gender, age,
+                                         tenure, balance, num_products,
+                                         has_credit_card, is_active_member,
+                                         estimated_salary)
 
-    make_prediction(input_df, input_dict)
+  avg_probability = make_predictions(input_df, input_dict)
+  print("avg_probability", avg_probability)
 
-#def prepare_input(credit_score, location, gender, age, tenure, balance, num_products, has_credit_card, is_active_member, estimated_salary):
+  explanation = explain_prediction(avg_probability, input_dict,
+                                   selected_customer['Surname'])
+
+  st.markdown("---")
+
+  st.subheader("Explanation of Prediction")
+
+  st.markdown(explanation)
