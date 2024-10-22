@@ -36,10 +36,10 @@ def prepare_input(credit_score, location, gender, age, tenure, balance, num_prod
     'Geography_Spain':1 if location == 'Spain' else 0,
     'Gender_Female': 1 if gender == 'Female' else 0,
     'Gender_Male': 1 if gender == 'Male' else 0,
-    'CLV': balance / estimated_salary,
+    'CLV': balance * estimated_salary / 100000,
     'TenureAgeRatio': tenure / age,
-    'AgeGroup_Middle-Aged': 1 if age > 30 and age < 46 else 0,
-    'AgeGroup_Senior' : 1 if age > 45 and age < 60 else 0,
+    'AgeGroup_Middle-Aged': 1 if age > 30 and age <= 45 else 0,
+    'AgeGroup_Senior' : 1 if age > 45 and age <= 60 else 0,
     'AgeGroup_Elderly': 1 if age > 60 else 0
   }
 
