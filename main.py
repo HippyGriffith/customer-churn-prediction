@@ -19,6 +19,27 @@ xgboost_SMOTE_model = load_model('xgboost-SMOTE.pkl')
 xgboost_featureEngineered_model = load_model(
     'xgboost_featureEngineered.pkl')
 
+def prepare_input(credit_score, location, gender, age, tenure, balance, num_products, has_credit_card, is_active_member, estimated_salary):
+
+  input_dict = {
+    'CreditScore': credit_score,
+    'Age': age,
+    'Tenure': tenure,
+    'Balance': balance,
+    'NumOfProducts': num_products,
+    'HasCrCard': int(has_credit_card),
+    'IsActiveMember': int(is_active_member),
+    'EstimatedSalary': estimated_salary,
+    'Geography_France': 1 if location == 'France' else 0,
+    'Geography_Germany': 1 if location == 'Germany' else 0,
+    'Geography_Spain':1 if location == 'Spain' else 0,
+    'Gender_Male': 1 if gender == 'Male' else 0,
+    'Gender_Female': 1 if gender == 'Female' else 0
+  }
+
+  input_df = pd.DataFrame([input_dict])
+  return input_df, input_dict
+
 st.title("Customer Churn Prediction")
 
 df = pd.read_csv("churn.csv")
